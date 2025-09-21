@@ -21,17 +21,17 @@ class IS31FL3733_Controller
 {
 private:
     int module_count;
-    int current_page = 0;
-    void switchPage(int page);
+    uint8_t current_page[16];
+    void switchPage(int page, uint8_t module = 0x00);
 
 public:
     IS31FL3733_Controller(int SBD_PIN);
-    void setShutdown(bool mode);
-    void setGlobalBrightness(uint8_t modifier);
-    void setLEDRowPowerStatus(uint8_t row_reg, uint8_t power_code);
-    void setLEDPWM(uint8_t led_reg, uint8_t pwm);
-    void setLEDPowers(int row, uint8_t color_mask, uint8_t power_code);
-    void powerAll(uint8_t color_mask, bool powered = true);
+    void setShutdown(bool mode, uint8_t module = 0x00);
+    void setGlobalBrightness(uint8_t modifier, uint8_t module = 0x00);
+    void setLEDRowPowerStatus(uint8_t row_reg, uint8_t power_code, uint8_t module = 0x00);
+    void setLEDPWM(uint8_t led_reg, uint8_t pwm, uint8_t module = 0x00);
+    void setLEDPowers(int row, uint8_t color_mask, uint8_t power_code, uint8_t module = 0x00);
+    void powerAll(uint8_t color_mask, bool powered = true, uint8_t module = 0x00);
 };
 
 #endif

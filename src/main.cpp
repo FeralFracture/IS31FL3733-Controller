@@ -14,30 +14,35 @@ const int brightness_levels[10] = {1, 5, 10, 25, 50, 75, 100, 150, 250, 255};
 IS31FL3733_Controller *controller;
 
 void debugGlobalBrightness();
-void setAllPWM(uint8_t val);
+void setAllPWM(uint8_t val, uint8_t module = 0);
 
 void setup()
 {
   Serial.begin(921600);
   Serial.println(" ");
+
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setClock(400000);
-  terminal_write_scanI2C();
-  controller = new IS31FL3733_Controller(SDB_PIN);
-  controller->setGlobalBrightness(75);
-  setAllPWM(12);
-  controller->powerAll(COLOR_G);
 
-    int pwm_level = 5;
-  for (uint8_t i = 0x00; i <= 0xBF; i++)
-  {
-    controller->setLEDPWM(i, pwm_level);
-    pwm_level += 1;
-    if (pwm_level > 255)
-    {
-      pwm_level = 1;
-    }
-  }
+  controller = new IS31FL3733_Controller(SDB_PIN);
+  controller->setGlobalBrightness(30, 5);
+  controller->powerAll(COLOR_R | COLOR_G, true, 5);
+  setAllPWM(12, 5);
+
+  controller->setGlobalBrightness(50, 0);
+  controller->powerAll(COLOR_R | COLOR_B, true, 0);
+  setAllPWM(12, 0);
+
+  //   int pwm_level = 5;
+  // for (uint8_t i = 0x00; i <= 0xBF; i++)
+  // {
+  //   controller->setLEDPWM(i, pwm_level);
+  //   pwm_level += 3;
+  //   if (pwm_level > 255)
+  //   {
+  //     pwm_level = 1;
+  //   }
+  // }
 }
 
 void loop()
@@ -46,11 +51,11 @@ void loop()
   // debugGlobalBrightness();
 }
 
-void setAllPWM(uint8_t val)
+void setAllPWM(uint8_t val, uint8_t module)
 {
   for (uint8_t reg = 0x00; reg <= 0xBF; reg++)
   {
-    controller->setLEDPWM(reg, val);
+    controller->setLEDPWM(reg, val, module);
   }
 }
 void debugGlobalBrightness()
