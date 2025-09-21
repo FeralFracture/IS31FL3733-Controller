@@ -26,11 +26,11 @@ void setup()
 
   controller = new IS31FL3733_Controller(SDB_PIN);
   controller->setGlobalBrightness(30, 5);
-  controller->powerAll(COLOR_R | COLOR_G, true, 5);
+  controller->powerAll(COLOR_G | COLOR_B, true, 5);
   setAllPWM(12, 5);
 
   controller->setGlobalBrightness(50, 0);
-  controller->powerAll(COLOR_R | COLOR_B, true, 0);
+  controller->powerAll(COLOR_B, true, 0);
   setAllPWM(12, 0);
 
   //   int pwm_level = 5;

@@ -10,14 +10,27 @@ IS31FL3733_Controller::IS31FL3733_Controller(int SDB_PIN)
     }
     uint8_t devices[16];
     uint8_t count = scanI2C(devices, sizeof(devices));
+    bool masterSet = false;
     for (uint8_t i = 0; i < count; i++)
     {
         if (devices[i] >= 0x50 && devices[i] <= 0x5F)
         {
-            Serial.printf("Found Addr: 0x%02X\n", devices[i]);
+            // Serial.printf("Found Addr: 0x%02X\n", devices[i]);
             writeRegister(devices[i], 0xFE, 0xC5);
             writeRegister(devices[i], 0xFD, 0x03);
-            writeRegister(devices[i], 0x00, 0x01);
+            if (count > 1 && !masterSet)
+            {
+                masterSet = true;
+                writeRegister(devices[i], 0x00, B01000001);
+            }
+            else if (count > 1)
+            {
+                writeRegister(devices[i], 0x00, B10000001);
+            }
+            else
+            {
+                writeRegister(devices[i], 0x00, 0x01);
+            }
             for (uint8_t reg = 0x00; reg <= 0x17; reg++)
             {
                 setLEDRowPowerStatus(reg, B00000000, devices[i] - IS31FL3733_ADDR);
