@@ -1,0 +1,37 @@
+#ifndef IS31FL3733_CONTROLLER_H
+#define IS31FL3733_CONTROLLER_H
+
+#include <Arduino.h>
+#include <Wire.h>
+#include "i2c_utils.h"
+
+#define IS31FL3733_ADDR 0x50
+#define COLOR_R 0x01
+#define COLOR_G 0x02
+#define COLOR_B 0x04
+
+const uint8_t BLUE_ROW_LOOKUP[8] =
+    {0x01, 0x07, 0x0D, 0x13, 0x00, 0x06, 0x0C, 0x12};
+const uint8_t GREEN_ROW_LOOKUP[8] =
+    {0x03, 0x09, 0x0F, 0x15, 0x02, 0x08, 0x0E, 0x14};
+const uint8_t RED_ROW_LOOKUP[8] =
+    {0x05, 0x0B, 0x11, 0x17, 0x04, 0x0A, 0x10, 0x16};
+
+class IS31FL3733_Controller
+{
+private:
+    int module_count;
+    int current_page = 0;
+    void switchPage(int page);
+
+public:
+    IS31FL3733_Controller(int SBD_PIN);
+    void setShutdown(bool mode);
+    void setGlobalBrightness(uint8_t modifier);
+    void setLEDRowPowerStatus(uint8_t row_reg, uint8_t power_code);
+    void setLEDPWM(uint8_t led_reg, uint8_t pwm);
+    void setLEDPowers(int row, uint8_t color_mask, uint8_t power_code);
+    void powerAll(uint8_t color_mask, bool powered = true);
+};
+
+#endif
