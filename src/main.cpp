@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include "IS31FL3733_controller.h"
 
-#include "I2S.h"
-
 const int SDA_PIN = 4;
 const int SCL_PIN = 22;
 const int INTB_PIN = 21;
@@ -25,11 +23,11 @@ void setup()
   Wire.setClock(400000);
 
   controller = new IS31FL3733_Controller(SDB_PIN);
-  controller->setGlobalBrightness(30, 5);
+  controller->setGlobalBrightness(10, 5);
   controller->powerAll(COLOR_G | COLOR_B, true, 5);
   setAllPWM(12, 5);
 
-  controller->setGlobalBrightness(50, 0);
+  controller->setGlobalBrightness(10, 0);
   controller->powerAll(COLOR_B, true, 0);
   setAllPWM(12, 0);
 
