@@ -25,7 +25,7 @@ private:
     void switchPage(int page, uint8_t module = 0x00);
 
 public:
-    IS31FL3733_Controller(int SBD_PIN);
+    IS31FL3733_Controller(int SBD_PIN,bool syncing = false);
     void setShutdown(bool mode, uint8_t module = 0x00);
     void setGlobalBrightness(uint8_t modifier, uint8_t module = 0x00);
     void setLEDRowPowerStatus(uint8_t row_reg, uint8_t power_code, uint8_t module = 0x00);

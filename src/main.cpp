@@ -7,12 +7,23 @@ const int INTB_PIN = 21;
 const int SDB_PIN = 23;
 int global_brightness = 0;
 
-const int light_delays[3] = {10, 600, 5};
-const int brightness_levels[10] = {1, 5, 10, 25, 50, 75, 100, 150, 250, 255};
+const int light_delays[6] = {60, 200, 25, 5, 300, 20},
+          red_pwm = 100,
+          blue_pwm = 100,
+          green_pwm = 100,
+          purple_pwm[2] = {100, 100},
+          yellow_pwm[2] = {100, 100},
+          cyan_pwm[2] = {100, 100};
+
 IS31FL3733_Controller *controller;
 
 void debugGlobalBrightness();
 void setAllPWM(uint8_t val, uint8_t module = 0);
+void scanAllI2C();
+void transition(bool on);
+void debugRGBLED();
+void setLEDPWM(uint8_t columns, uint8_t rows, uint8_t pwm, uint8_t colors, uint8_t module = 0x00);
+void disgustingTestCode();
 
 void setup()
 {
@@ -22,31 +33,90 @@ void setup()
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setClock(400000);
 
+  scanAllI2C();
   controller = new IS31FL3733_Controller(SDB_PIN);
-  controller->setGlobalBrightness(10, 5);
-  controller->powerAll(COLOR_G | COLOR_B, true, 5);
-  setAllPWM(12, 5);
-
+  delay(1000);
   controller->setGlobalBrightness(10, 0);
   controller->powerAll(COLOR_B, true, 0);
-  setAllPWM(12, 0);
+  setAllPWM(blue_pwm, 0);
+  delay(light_delays[0]);
 
-  //   int pwm_level = 5;
-  // for (uint8_t i = 0x00; i <= 0xBF; i++)
-  // {
-  //   controller->setLEDPWM(i, pwm_level);
-  //   pwm_level += 3;
-  //   if (pwm_level > 255)
-  //   {
-  //     pwm_level = 1;
-  //   }
-  // }
+  controller->setGlobalBrightness(25, 5);
+  controller->powerAll(COLOR_R | COLOR_B, true, 5);
+  setAllPWM(12, 5);
+  delay(light_delays[0]);
+
+  controller->setGlobalBrightness(25, 4);
+  controller->powerAll(COLOR_R, true, 4);
+  setAllPWM(12, 4);
+  delay(light_delays[0]);
+
+  controller->setGlobalBrightness(40, 8);
+  controller->powerAll(COLOR_R | COLOR_G, true, 8);
+  setAllPWM(12, 8);
+  delay(light_delays[0]);
+
+  controller->setGlobalBrightness(10, 12);
+  controller->powerAll(COLOR_G, true, 12);
+  setAllPWM(12, 12);
+  delay(light_delays[1]);
+  transition(false);
+  // delay(light_delays[1]);
+  // transition(true);
+  // delay(light_delays[1]);
+  // transition(false);
+  // delay(100);
+  setAllPWM(0, 0);
+  setAllPWM(0, 5);
+  setAllPWM(0, 4);
+  setAllPWM(0, 8);
+  setAllPWM(0, 12);
+  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 0);
+  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 5);
+  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 4);
+  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 8);
+  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 12);
+  controller->setGlobalBrightness(64, 0);
+  controller->setGlobalBrightness(64, 5);
+  controller->setGlobalBrightness(64, 4);
+  controller->setGlobalBrightness(64, 8);
+  controller->setGlobalBrightness(64, 12);
+
+  disgustingTestCode();
 }
 
 void loop()
 {
+  for (int i = 63; i >= 0; i--)
+  {
+    controller->setGlobalBrightness(i, 0);
+    controller->setGlobalBrightness(i, 5);
+    controller->setGlobalBrightness(i, 4);
+    controller->setGlobalBrightness(i, 8);
+    controller->setGlobalBrightness(i, 12);
+    delay(50);
+  }
+  delay(50);
+  for (int i = 1; i < 65; i++)
+  {
+    controller->setGlobalBrightness(i, 0);
+    controller->setGlobalBrightness(i, 5);
+    controller->setGlobalBrightness(i, 4);
+    controller->setGlobalBrightness(i, 8);
+    controller->setGlobalBrightness(i, 12);
+    delay(50);
+  }
+}
 
-  // debugGlobalBrightness();
+void scanAllI2C()
+{
+  uint8_t devices[16];
+  uint8_t count = scanI2C(devices, sizeof(devices));
+  Serial.println("\nI2C Devices Found:");
+  for (uint8_t i = 0; i < count; i++)
+  {
+    Serial.printf("- 0x%02X\n", devices[i]);
+  }
 }
 
 void setAllPWM(uint8_t val, uint8_t module)
@@ -56,105 +126,365 @@ void setAllPWM(uint8_t val, uint8_t module)
     controller->setLEDPWM(reg, val, module);
   }
 }
-void debugGlobalBrightness()
+
+void DebugRGBLED()
 {
-  Serial.println(brightness_levels[global_brightness]);
-  // RED
-  for (int i = 0; i < 8; i++)
+  for (int i = 0; i < 2; i++)
   {
-    delay(light_delays[0]);
-    controller->setLEDPowers(i, COLOR_R, B11111111);
-  }
-  delay(light_delays[1]);
-  for (int i = 8; i >= 0; i--)
-  {
-    delay(light_delays[2]);
-    controller->setLEDPowers(i, COLOR_R, B00000000);
-  }
+    for (uint8_t reg_offset = 0xC0; reg_offset > 0x00; reg_offset -= 0x10)
+    {
+      for (uint8_t reg = 0x00; reg < 0x08; reg += 0x01)
+      {
 
-  // BLUE
-  for (int i = 0; i < 8; i++)
-  {
-    delay(light_delays[0]);
-    controller->setLEDPowers(i, COLOR_B, B11111111);
-  }
-  delay(light_delays[1]);
-  for (int i = 8; i >= 0; i--)
-  {
-    delay(light_delays[2]);
-    controller->setLEDPowers(i, COLOR_B, B00000000);
-  }
+        controller->setLEDPWM(reg + reg_offset - 0x10 + (i == 0 ? 0x00 : 0x08), 40, 0);
+        delay(light_delays[5]);
+      }
 
-  // GREEN
-  for (int i = 0; i < 8; i++)
-  {
-    delay(light_delays[0]);
-    controller->setLEDPowers(i, COLOR_G, B11111111);
-  }
-  delay(light_delays[1]);
-  for (int i = 8; i >= 0; i--)
-  {
-    delay(light_delays[2]);
-    controller->setLEDPowers(i, COLOR_G, B00000000);
-  }
+      delay(light_delays[4]);
 
-  // RG
-  for (int i = 0; i < 8; i++)
-  {
-    delay(light_delays[0]);
-    controller->setLEDPowers(i, COLOR_R | COLOR_G, B11111111);
+      for (uint8_t reg = 0x08; reg > 0x00; reg -= 0x01)
+      {
+        controller->setLEDPWM(reg + reg_offset - 0x11 + (i == 0 ? 0x00 : 0x08), 0, 0);
+        delay(light_delays[5]);
+      }
+    }
   }
-  delay(light_delays[1]);
-  for (int i = 8; i >= 0; i--)
-  {
-    delay(light_delays[2]);
-    controller->setLEDPowers(i, COLOR_R | COLOR_G, B00000000);
-  }
+}
 
-  // RB
-  for (int i = 0; i < 8; i++)
+void transition(bool on)
+{
+  if (on)
   {
-    delay(light_delays[0]);
-    controller->setLEDPowers(i, COLOR_R | COLOR_B, B11111111);
-  }
-  delay(light_delays[1]);
-  for (int i = 8; i >= 0; i--)
-  {
-    delay(light_delays[2]);
-    controller->setLEDPowers(i, COLOR_R | COLOR_B, B00000000);
-  }
+    for (int i = 0; i < 8; i++)
+    {
+      controller->setLEDRowPowerStatus(BLUE_ROW_LOOKUP[i], B11111111, 0);
+      delay(light_delays[2]);
+    }
 
-  // GB
-  for (int i = 0; i < 8; i++)
-  {
-    delay(light_delays[0]);
+    for (int i = 0; i < 8; i++)
+    {
+      controller->setLEDRowPowerStatus(BLUE_ROW_LOOKUP[i], B11111111, 5);
+      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], B11111111, 5);
+      delay(light_delays[2]);
+    }
 
-    controller->setLEDPowers(i, COLOR_G | COLOR_B, B11111111);
-  }
-  delay(light_delays[1]);
-  for (int i = 8; i >= 0; i--)
-  {
-    delay(light_delays[2]);
-    controller->setLEDPowers(i, COLOR_G | COLOR_B, B00000000);
-  }
+    for (int i = 0; i < 8; i++)
+    {
+      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], B11111111, 4);
+      delay(light_delays[2]);
+    }
 
-  // RGB
-  for (int i = 0; i < 8; i++)
-  {
-    delay(light_delays[0]);
-    controller->setLEDPowers(i, COLOR_R | COLOR_G | COLOR_B, B11111111);
+    for (int i = 7; i >= 0; i--)
+    {
+      controller->setLEDRowPowerStatus(GREEN_ROW_LOOKUP[i], B11111111, 8);
+      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], B11111111, 8);
+      delay(light_delays[2]);
+    }
+    for (int i = 7; i >= 0; i--)
+    {
+      controller->setLEDRowPowerStatus(GREEN_ROW_LOOKUP[i], B11111111, 12);
+      delay(light_delays[2]);
+    }
   }
-  delay(light_delays[1]);
-  for (int i = 8; i >= 0; i--)
+  else
   {
-    delay(light_delays[2]);
-    controller->setLEDPowers(i, COLOR_R | COLOR_G | COLOR_B, B00000000);
-  }
+    for (int i = 0; i < 8; i++)
+    {
+      controller->setLEDRowPowerStatus(BLUE_ROW_LOOKUP[i], 0x00, 0);
+      delay(light_delays[2]);
+    }
 
-  global_brightness += 1;
-  if (global_brightness > 9)
-  {
-    global_brightness = 0;
+    for (int i = 0; i < 8; i++)
+    {
+      controller->setLEDRowPowerStatus(BLUE_ROW_LOOKUP[i], 0x00, 5);
+      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], 0x00, 5);
+      delay(light_delays[2]);
+    }
+
+    for (int i = 0; i < 8; i++)
+    {
+      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], 0x00, 4);
+      delay(light_delays[2]);
+    }
+
+    for (int i = 7; i >= 0; i--)
+    {
+      controller->setLEDRowPowerStatus(GREEN_ROW_LOOKUP[i], 0x00, 8);
+      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], 0x00, 8);
+      delay(light_delays[2]);
+    }
+    for (int i = 7; i >= 0; i--)
+    {
+      controller->setLEDRowPowerStatus(GREEN_ROW_LOOKUP[i], 0x00, 12);
+      delay(light_delays[2]);
+    }
   }
-  controller->setGlobalBrightness(brightness_levels[global_brightness]);
+}
+
+void setLEDPWM(uint8_t columns, uint8_t rows, uint8_t pwm, uint8_t colors, uint8_t module)
+{
+  for (int row = 0; row < 8; row++)
+  {
+    if (!((rows >> (7 - row)) & 0x01))
+    {
+      continue;
+    }
+    for (int column = 0; column < 8; column++)
+    {
+      if (!((columns >> (7 - column)) & 0x01))
+      {
+        continue;
+      }
+      uint8_t odd_offset = (row < 4 ? 0x00 : 0x08);
+      uint8_t reg_offset = 0x30 * (row % 4);
+
+      if (colors & COLOR_R)
+      {
+        controller->setLEDPWM(0xB0 - reg_offset + ((uint8_t)column) + odd_offset, pwm, module);
+      }
+      if (colors & COLOR_G)
+      {
+        controller->setLEDPWM(0xB0 - reg_offset + ((uint8_t)column) + odd_offset - 0x10, pwm, module);
+      }
+      if (colors & COLOR_B)
+      {
+        controller->setLEDPWM(0xB0 - reg_offset + ((uint8_t)column) + odd_offset - 0x20, pwm, module);
+      }
+      delay(30);
+    }
+  }
+}
+
+void disgustingTestCode()
+{
+  setLEDPWM(B11111111, B10000000, 40, COLOR_R);
+  setLEDPWM(B10000000, B11111111, 40, COLOR_B);
+
+  setLEDPWM(B11111111, B01000000, 35, COLOR_R);
+  setLEDPWM(B01000000, B11111111, 35, COLOR_B);
+
+  setLEDPWM(B11111111, B00100000, 30, COLOR_R);
+  setLEDPWM(B00100000, B11111111, 30, COLOR_B);
+
+  setLEDPWM(B11111111, B00010000, 25, COLOR_R);
+  setLEDPWM(B00010000, B11111111, 25, COLOR_B);
+
+  setLEDPWM(B11111111, B00001000, 20, COLOR_R);
+  setLEDPWM(B00001000, B11111111, 20, COLOR_B);
+
+  setLEDPWM(B11111111, B00000100, 15, COLOR_R);
+  setLEDPWM(B00000100, B11111111, 15, COLOR_B);
+
+  setLEDPWM(B11111111, B00000010, 10, COLOR_R);
+  setLEDPWM(B00000010, B11111111, 10, COLOR_B);
+
+  setLEDPWM(B11111111, B00000001, 5, COLOR_R);
+  setLEDPWM(B00000001, B11111111, 5, COLOR_B);
+
+  setLEDPWM(B11111111, B10000000, 40, COLOR_R, 5);
+  setLEDPWM(B10000000, B11111111, 5, COLOR_G, 5);
+
+  setLEDPWM(B11111111, B01000000, 35, COLOR_R, 5);
+  setLEDPWM(B01000000, B11111111, 10, COLOR_G, 5);
+
+  setLEDPWM(B11111111, B00100000, 30, COLOR_R, 5);
+  setLEDPWM(B00100000, B11111111, 15, COLOR_G, 5);
+
+  setLEDPWM(B11111111, B00010000, 25, COLOR_R, 5);
+  setLEDPWM(B00010000, B11111111, 20, COLOR_G, 5);
+
+  setLEDPWM(B11111111, B00001000, 20, COLOR_R, 5);
+  setLEDPWM(B00001000, B11111111, 25, COLOR_G, 5);
+
+  setLEDPWM(B11111111, B00000100, 15, COLOR_R, 5);
+  setLEDPWM(B00000100, B11111111, 30, COLOR_G, 5);
+
+  setLEDPWM(B11111111, B00000010, 10, COLOR_R, 5);
+  setLEDPWM(B00000010, B11111111, 35, COLOR_G, 5);
+
+  setLEDPWM(B11111111, B00000001, 5, COLOR_R, 5);
+  setLEDPWM(B00000001, B11111111, 40, COLOR_G, 5);
+
+  setLEDPWM(B11111111, B10000000, 40, COLOR_G, 4);
+  setLEDPWM(B10000000, B11111111, 40, COLOR_B, 4);
+
+  setLEDPWM(B11111111, B01000000, 35, COLOR_G, 4);
+  setLEDPWM(B01000000, B11111111, 35, COLOR_B, 4);
+
+  setLEDPWM(B11111111, B00100000, 30, COLOR_G, 4);
+  setLEDPWM(B00100000, B11111111, 30, COLOR_B, 4);
+
+  setLEDPWM(B11111111, B00010000, 25, COLOR_G, 4);
+  setLEDPWM(B00010000, B11111111, 25, COLOR_B, 4);
+
+  setLEDPWM(B11111111, B00001000, 20, COLOR_G, 4);
+  setLEDPWM(B00001000, B11111111, 20, COLOR_B, 4);
+
+  setLEDPWM(B11111111, B00000100, 15, COLOR_G, 4);
+  setLEDPWM(B00000100, B11111111, 15, COLOR_B, 4);
+
+  setLEDPWM(B11111111, B00000010, 10, COLOR_G, 4);
+  setLEDPWM(B00000010, B11111111, 10, COLOR_B, 4);
+
+  setLEDPWM(B11111111, B00000001, 5, COLOR_G, 4);
+  setLEDPWM(B00000001, B11111111, 5, COLOR_B, 4);
+
+  setLEDPWM(B00000001, B00000001, 160, COLOR_R, 8);
+  setLEDPWM(B00000010, B00000001, 140, COLOR_R, 8);
+  setLEDPWM(B00000100, B00000001, 120, COLOR_R, 8);
+  setLEDPWM(B00001000, B00000001, 100, COLOR_R, 8);
+  setLEDPWM(B00010000, B00000001, 80, COLOR_R, 8);
+  setLEDPWM(B00100000, B00000001, 60, COLOR_R, 8);
+  setLEDPWM(B01000000, B00000001, 40, COLOR_R, 8);
+  setLEDPWM(B10000000, B00000001, 20, COLOR_R, 8);
+
+  setLEDPWM(B00000001, B00000010, 120, COLOR_R, 8);
+  setLEDPWM(B00000010, B00000010, 100, COLOR_R, 8);
+  setLEDPWM(B00000100, B00000010, 80, COLOR_R, 8);
+  setLEDPWM(B00001000, B00000010, 60, COLOR_R, 8);
+  setLEDPWM(B00010000, B00000010, 40, COLOR_R, 8);
+  setLEDPWM(B00100000, B00000010, 20, COLOR_R, 8);
+  setLEDPWM(B01000000, B00000010, 10, COLOR_R, 8);
+  setLEDPWM(B10000000, B00000010, 5, COLOR_R, 8);
+
+  setLEDPWM(B00000001, B00000100, 80, COLOR_R, 8);
+  setLEDPWM(B00000010, B00000100, 60, COLOR_R, 8);
+  setLEDPWM(B00000100, B00000100, 40, COLOR_R, 8);
+  setLEDPWM(B00001000, B00000100, 20, COLOR_R, 8);
+  setLEDPWM(B00010000, B00000100, 10, COLOR_R, 8);
+  setLEDPWM(B00100000, B00000100, 5, COLOR_R, 8);
+  setLEDPWM(B01000000, B00000100, 1, COLOR_R, 8);
+  setLEDPWM(B10000000, B00000100, 0, COLOR_R, 8);
+
+  setLEDPWM(B00000001, B00001000, 80, COLOR_G, 8);
+  setLEDPWM(B00000010, B00001000, 60, COLOR_G, 8);
+  setLEDPWM(B00000100, B00001000, 40, COLOR_G, 8);
+  setLEDPWM(B00001000, B00001000, 20, COLOR_G, 8);
+  setLEDPWM(B00010000, B00001000, 10, COLOR_G, 8);
+  setLEDPWM(B00100000, B00001000, 5, COLOR_G, 8);
+  setLEDPWM(B01000000, B00001000, 1, COLOR_G, 8);
+  setLEDPWM(B10000000, B00001000, 0, COLOR_G, 8);
+
+  setLEDPWM(B00000001, B00010000, 120, COLOR_G, 8);
+  setLEDPWM(B00000010, B00010000, 100, COLOR_G, 8);
+  setLEDPWM(B00000100, B00010000, 80, COLOR_G, 8);
+  setLEDPWM(B00001000, B00010000, 60, COLOR_G, 8);
+  setLEDPWM(B00010000, B00010000, 40, COLOR_G, 8);
+  setLEDPWM(B00100000, B00010000, 20, COLOR_G, 8);
+  setLEDPWM(B01000000, B00010000, 10, COLOR_G, 8);
+  setLEDPWM(B10000000, B00010000, 5, COLOR_G, 8);
+
+  setLEDPWM(B00000001, B00100000, 160, COLOR_G, 8);
+  setLEDPWM(B00000010, B00100000, 140, COLOR_G, 8);
+  setLEDPWM(B00000100, B00100000, 120, COLOR_G, 8);
+  setLEDPWM(B00001000, B00100000, 100, COLOR_G, 8);
+  setLEDPWM(B00010000, B00100000, 80, COLOR_G, 8);
+  setLEDPWM(B00100000, B00100000, 60, COLOR_G, 8);
+  setLEDPWM(B01000000, B00100000, 40, COLOR_G, 8);
+  setLEDPWM(B10000000, B00100000, 20, COLOR_G, 8);
+
+  setLEDPWM(B00000001, B01000000, 160, COLOR_B, 8);
+  setLEDPWM(B00000010, B01000000, 140, COLOR_B, 8);
+  setLEDPWM(B00000100, B01000000, 120, COLOR_B, 8);
+  setLEDPWM(B00001000, B01000000, 100, COLOR_B, 8);
+  setLEDPWM(B00010000, B01000000, 80, COLOR_B, 8);
+  setLEDPWM(B00100000, B01000000, 60, COLOR_B, 8);
+  setLEDPWM(B01000000, B01000000, 40, COLOR_B, 8);
+  setLEDPWM(B10000000, B01000000, 20, COLOR_B, 8);
+
+  setLEDPWM(B00000001, B10000000, 120, COLOR_B, 8);
+  setLEDPWM(B00000010, B10000000, 100, COLOR_B, 8);
+  setLEDPWM(B00000100, B10000000, 80, COLOR_B, 8);
+  setLEDPWM(B00001000, B10000000, 60, COLOR_B, 8);
+  setLEDPWM(B00010000, B10000000, 40, COLOR_B, 8);
+  setLEDPWM(B00100000, B10000000, 20, COLOR_B, 8);
+  setLEDPWM(B01000000, B10000000, 10, COLOR_B, 8);
+  setLEDPWM(B10000000, B10000000, 5, COLOR_B, 8);
+
+  setLEDPWM(B10000000, B11111111, 160, COLOR_G, 12);
+  setLEDPWM(B11000000, B10000000, 160, COLOR_G, 12);
+  setLEDPWM(B00110000, B10000000, 120, COLOR_G, 12);
+  setLEDPWM(B00001100, B10000000, 80, COLOR_G, 12);
+  setLEDPWM(B00000011, B10000000, 40, COLOR_G, 12);
+  setLEDPWM(B01000000, B01000000, 140, COLOR_G, 12);
+  setLEDPWM(B00110000, B01000000, 100, COLOR_G, 12);
+  setLEDPWM(B00001100, B01000000, 60, COLOR_G, 12);
+  setLEDPWM(B00000011, B01000000, 20, COLOR_G, 12);
+  setLEDPWM(B01000000, B00100000, 120, COLOR_G, 12);
+  setLEDPWM(B00110000, B00100000, 80, COLOR_G, 12);
+  setLEDPWM(B00001100, B00100000, 40, COLOR_G, 12);
+  setLEDPWM(B01000000, B00010000, 100, COLOR_G, 12);
+  setLEDPWM(B00110000, B00010000, 60, COLOR_G, 12);
+  setLEDPWM(B00001100, B00010000, 20, COLOR_G, 12);
+  setLEDPWM(B01000000, B00001000, 80, COLOR_G, 12);
+  setLEDPWM(B00110000, B00001000, 40, COLOR_G, 12);
+  setLEDPWM(B01000000, B00000100, 60, COLOR_G, 12);
+  setLEDPWM(B00110000, B00000100, 20, COLOR_G, 12);
+  setLEDPWM(B01000000, B00000010, 60, COLOR_G, 12);
+  setLEDPWM(B01000000, B00000001, 40, COLOR_G, 12);
+
+  setLEDPWM(B00000001, B11111111, 160, COLOR_B, 12);
+  setLEDPWM(B00000011, B10000000, 160, COLOR_B, 12);
+  setLEDPWM(B00001100, B10000000, 120, COLOR_B, 12);
+  setLEDPWM(B00110000, B10000000, 80, COLOR_B, 12);
+  setLEDPWM(B11000000, B10000000, 40, COLOR_B, 12);
+  setLEDPWM(B00000010, B01000000, 140, COLOR_B, 12);
+  setLEDPWM(B00001100, B01000000, 100, COLOR_B, 12);
+  setLEDPWM(B00110000, B01000000, 60, COLOR_B, 12);
+  setLEDPWM(B11000000, B01000000, 20, COLOR_B, 12);
+  setLEDPWM(B00000010, B00100000, 120, COLOR_B, 12);
+  setLEDPWM(B00001100, B00100000, 80, COLOR_B, 12);
+  setLEDPWM(B00110000, B00100000, 40, COLOR_B, 12);
+  setLEDPWM(B00000010, B00010000, 100, COLOR_B, 12);
+  setLEDPWM(B00001100, B00010000, 60, COLOR_B, 12);
+  setLEDPWM(B00110000, B00010000, 20, COLOR_B, 12);
+  setLEDPWM(B00000010, B00001000, 80, COLOR_B, 12);
+  setLEDPWM(B00001100, B00001000, 40, COLOR_B, 12);
+  setLEDPWM(B00000010, B00000100, 60, COLOR_B, 12);
+  setLEDPWM(B00001100, B00000100, 20, COLOR_B, 12);
+  setLEDPWM(B00000010, B00000010, 60, COLOR_B, 12);
+  setLEDPWM(B00000010, B00000001, 40, COLOR_B, 12);
+
+  setLEDPWM(B00000011, B10000000, 160, COLOR_B, 12);
+  setLEDPWM(B00001100, B10000000, 120, COLOR_B, 12);
+  setLEDPWM(B00110000, B10000000, 80, COLOR_B, 12);
+  setLEDPWM(B11000000, B10000000, 40, COLOR_B, 12);
+  setLEDPWM(B00000011, B01000000, 140, COLOR_B, 12);
+  setLEDPWM(B00001100, B01000000, 100, COLOR_B, 12);
+  setLEDPWM(B00110000, B01000000, 60, COLOR_B, 12);
+  setLEDPWM(B11000000, B01000000, 20, COLOR_B, 12);
+  setLEDPWM(B00000011, B00100000, 120, COLOR_B, 12);
+  setLEDPWM(B00001100, B00100000, 80, COLOR_B, 12);
+  setLEDPWM(B00110000, B00100000, 40, COLOR_B, 12);
+  setLEDPWM(B00000011, B00010000, 100, COLOR_B, 12);
+  setLEDPWM(B00001100, B00010000, 60, COLOR_B, 12);
+  setLEDPWM(B00110000, B00010000, 20, COLOR_B, 12);
+  setLEDPWM(B00000011, B00001000, 80, COLOR_B, 12);
+  setLEDPWM(B00001100, B00001000, 40, COLOR_B, 12);
+  setLEDPWM(B00000011, B00000100, 60, COLOR_B, 12);
+  setLEDPWM(B00001100, B00000100, 20, COLOR_B, 12);
+  setLEDPWM(B00000011, B00000010, 60, COLOR_B, 12);
+  setLEDPWM(B00000010, B00000001, 40, COLOR_B, 12);
+
+  setLEDPWM(B11111111, B00000001, 160, COLOR_R, 12);
+  setLEDPWM(B10000000, B00000011, 160, COLOR_R, 12);
+  setLEDPWM(B10000000, B00001100, 120, COLOR_R, 12);
+  setLEDPWM(B10000000, B00110000, 80, COLOR_R, 12);
+  setLEDPWM(B10000000, B11000000, 40, COLOR_R, 12);
+  setLEDPWM(B01000000, B00000010, 140, COLOR_R, 12);
+  setLEDPWM(B01000000, B00001100, 100, COLOR_R, 12);
+  setLEDPWM(B01000000, B00110000, 60, COLOR_R, 12);
+  setLEDPWM(B01000000, B11000000, 20, COLOR_R, 12);
+  setLEDPWM(B00100000, B00000010, 120, COLOR_R, 12);
+  setLEDPWM(B00100000, B00001100, 80, COLOR_R, 12);
+  setLEDPWM(B00100000, B00110000, 40, COLOR_R, 12);
+  setLEDPWM(B00010000, B00000010, 100, COLOR_R, 12);
+  setLEDPWM(B00010000, B00001100, 60, COLOR_R, 12);
+  setLEDPWM(B00010000, B00110000, 20, COLOR_R, 12);
+  setLEDPWM(B00001000, B00000010, 80, COLOR_R, 12);
+  setLEDPWM(B00001000, B00001100, 40, COLOR_R, 12);
+  setLEDPWM(B00000100, B00000010, 60, COLOR_R, 12);
+  setLEDPWM(B00000100, B00001100, 20, COLOR_R, 12);
+  setLEDPWM(B00000010, B00000010, 60, COLOR_R, 12);
+  setLEDPWM(B00000001, B00000010, 40, COLOR_R, 12);
 }

@@ -1,6 +1,6 @@
 #include "IS31FL3733_controller.h"
 
-IS31FL3733_Controller::IS31FL3733_Controller(int SDB_PIN)
+IS31FL3733_Controller::IS31FL3733_Controller(int SDB_PIN, bool syncing)
 {
     pinMode(SDB_PIN, OUTPUT);
     digitalWrite(SDB_PIN, HIGH);
@@ -18,12 +18,12 @@ IS31FL3733_Controller::IS31FL3733_Controller(int SDB_PIN)
             // Serial.printf("Found Addr: 0x%02X\n", devices[i]);
             writeRegister(devices[i], 0xFE, 0xC5);
             writeRegister(devices[i], 0xFD, 0x03);
-            if (count > 1 && !masterSet)
+            if (count > 1 && !masterSet && syncing)
             {
                 masterSet = true;
                 writeRegister(devices[i], 0x00, B01000001);
             }
-            else if (count > 1)
+            else if (count > 1 && syncing)
             {
                 writeRegister(devices[i], 0x00, B10000001);
             }
