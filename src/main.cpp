@@ -34,7 +34,7 @@ void setup()
   Wire.setClock(400000);
 
   scanAllI2C();
-  controller = new IS31FL3733_Controller(SDB_PIN);
+  controller = new IS31FL3733_Controller(SDB_PIN, true);
   delay(1000);
   controller->setGlobalBrightness(10, 0);
   controller->powerAll(COLOR_B, true, 0);
