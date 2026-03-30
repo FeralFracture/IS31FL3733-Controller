@@ -1,10 +1,10 @@
 #include <Arduino.h>
 #include "IS31FL3733_controller.h"
 
-const int SDA_PIN = 4;
-const int SCL_PIN = 22;
+const int SDA_PIN = 21;
+const int SCL_PIN = 23;
 const int INTB_PIN = 21;
-const int SDB_PIN = 23;
+const int SDB_PIN = 22;
 int global_brightness = 0;
 
 const int light_delays[6] = {60, 200, 25, 5, 300, 20},
@@ -17,6 +17,7 @@ const int light_delays[6] = {60, 200, 25, 5, 300, 20},
 
 IS31FL3733_Controller *controller;
 
+uint8_t rotR(uint8_t x, uint8_t n);
 void debugGlobalBrightness();
 void setAllPWM(uint8_t val, uint8_t module = 0);
 void scanAllI2C();
@@ -24,6 +25,28 @@ void transition(bool on);
 void debugRGBLED();
 void setLEDPWM(uint8_t columns, uint8_t rows, uint8_t pwm, uint8_t colors, uint8_t module = 0x00);
 void disgustingTestCode();
+
+uint8_t data[] = {
+    B10001110,
+    B01011010,
+    B00110110};
+
+uint8_t red_pwm_lookup[] = {
+  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, //0
+  0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F // 5
+};
+uint8_t green_pwm_lookup[] = {
+  0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+  0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
+};
+uint8_t blue_pwm_lookup[] = {
+  // 0x#0 - 0x#7 = rows 1-4,
+  // 0x#8 - 0x#F = rows 5-8
+
+  //0x(0/3/6/9)# = Red
+  //0x(1/4/7/A)# = Green
+  //0x(2/5/8/B)# = Blue 
+};
 
 void setup()
 {
@@ -34,78 +57,109 @@ void setup()
   Wire.setClock(400000);
 
   scanAllI2C();
-  controller = new IS31FL3733_Controller(SDB_PIN, true);
+  controller = new IS31FL3733_Controller(SDB_PIN, false);
   delay(1000);
   controller->setGlobalBrightness(10, 0);
-  controller->powerAll(COLOR_B, true, 0);
-  setAllPWM(blue_pwm, 0);
-  delay(light_delays[0]);
+  // controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 0);
+  for (int i = 0; i < 8; i++)
+  {
+    controller->setLEDRowPower(i, COLOR_R, data[0] >> i | data[0] << 8 - i);
+    controller->setLEDRowPower(i, COLOR_G, data[1] >> i | data[1] << 8 - i);
+    controller->setLEDRowPower(i, COLOR_B, data[2] >> i | data[2] << 8 - i);
+  }
 
-  controller->setGlobalBrightness(25, 5);
-  controller->powerAll(COLOR_R | COLOR_B, true, 5);
-  setAllPWM(12, 5);
-  delay(light_delays[0]);
+  setAllPWM(1, 0);
+  controller->setLEDPWM(0x27, 100, 0);
+  controller->setLEDPWM(0x2F, 100, 0);
+  delay(1500);
 
-  controller->setGlobalBrightness(25, 4);
-  controller->powerAll(COLOR_R, true, 4);
-  setAllPWM(12, 4);
-  delay(light_delays[0]);
+  // delay(light_delays[0]);
 
-  controller->setGlobalBrightness(40, 8);
-  controller->powerAll(COLOR_R | COLOR_G, true, 8);
-  setAllPWM(12, 8);
-  delay(light_delays[0]);
+  // controller->setGlobalBrightness(25, 5);
+  // controller->powerAll(COLOR_R | COLOR_B, true, 5);
+  // setAllPWM(12, 5);
+  // delay(light_delays[0]);
 
-  controller->setGlobalBrightness(10, 12);
-  controller->powerAll(COLOR_G, true, 12);
-  setAllPWM(12, 12);
-  delay(light_delays[1]);
-  transition(false);
+  // controller->setGlobalBrightness(25, 4);
+  // controller->powerAll(COLOR_R, true, 4);
+  // setAllPWM(12, 4);
+  // delay(light_delays[0]);
+
+  // controller->setGlobalBrightness(40, 8);
+  // controller->powerAll(COLOR_R | COLOR_G, true, 8);
+  // setAllPWM(12, 8);
+  // delay(light_delays[0]);
+
+  // controller->setGlobalBrightness(10, 12);
+  // controller->powerAll(COLOR_G, true, 12);
+  // setAllPWM(12, 12);
   // delay(light_delays[1]);
+  // transition(false);
+  //  { delay(light_delays[1]);
   // transition(true);
   // delay(light_delays[1]);
   // transition(false);
-  // delay(100);
-  setAllPWM(0, 0);
-  setAllPWM(0, 5);
-  setAllPWM(0, 4);
-  setAllPWM(0, 8);
-  setAllPWM(0, 12);
-  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 0);
-  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 5);
-  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 4);
-  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 8);
-  controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 12);
-  controller->setGlobalBrightness(64, 0);
-  controller->setGlobalBrightness(64, 5);
-  controller->setGlobalBrightness(64, 4);
-  controller->setGlobalBrightness(64, 8);
-  controller->setGlobalBrightness(64, 12);
+  // delay(100); }
+  // setAllPWM(0, 0);
+  // setAllPWM(0, 5);
+  // setAllPWM(0, 4);
+  // setAllPWM(0, 8);
+  // setAllPWM(0, 12);
+  // controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 0);
+  // controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 5);
+  // controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 4);
+  // controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 8);
+  // controller->powerAll(COLOR_R | COLOR_G | COLOR_B, true, 12);
+  // controller->setGlobalBrightness(64, 0);
+  // controller->setGlobalBrightness(64, 5);
+  // controller->setGlobalBrightness(64, 4);
+  // controller->setGlobalBrightness(64, 8);
+  // controller->setGlobalBrightness(64, 12);
 
-  disgustingTestCode();
+  // disgustingTestCode();
 }
 
 void loop()
 {
-  for (int i = 63; i >= 0; i--)
-  {
-    controller->setGlobalBrightness(i, 0);
-    controller->setGlobalBrightness(i, 5);
-    controller->setGlobalBrightness(i, 4);
-    controller->setGlobalBrightness(i, 8);
-    controller->setGlobalBrightness(i, 12);
-    delay(50);
-  }
-  delay(50);
-  for (int i = 1; i < 65; i++)
-  {
-    controller->setGlobalBrightness(i, 0);
-    controller->setGlobalBrightness(i, 5);
-    controller->setGlobalBrightness(i, 4);
-    controller->setGlobalBrightness(i, 8);
-    controller->setGlobalBrightness(i, 12);
-    delay(50);
-  }
+for (int i = 0; i < 8; i++)
+{
+    for (int j = 0; j < 8; j++)
+    {
+        uint8_t r = rotR(data[0], j + i);
+        uint8_t g = rotR(data[1], j + i);
+        uint8_t b = rotR(data[2], j + i);
+
+        controller->setLEDRowPower(j, COLOR_R, r);
+        controller->setLEDRowPower(j, COLOR_G, g);
+        controller->setLEDRowPower(j, COLOR_B, b);
+    }
+    delay(1000);
+}
+  // for (int i = 63; i >= 0; i--)
+  // {
+  //   controller->setGlobalBrightness(i, 0);
+  //   controller->setGlobalBrightness(i, 5);
+  //   controller->setGlobalBrightness(i, 4);
+  //   controller->setGlobalBrightness(i, 8);
+  //   controller->setGlobalBrightness(i, 12);
+  //   delay(50);
+  // }
+  // delay(50);
+  // for (int i = 1; i < 65; i++)
+  // {
+  //   controller->setGlobalBrightness(i, 0);
+  //   controller->setGlobalBrightness(i, 5);
+  //   controller->setGlobalBrightness(i, 4);
+  //   controller->setGlobalBrightness(i, 8);
+  //   controller->setGlobalBrightness(i, 12);
+  //   delay(50);
+  // }
+}
+
+uint8_t rotR(uint8_t x, uint8_t n) {
+ n &= 7;
+ if (n == 0) return x;
+  return (x >> n) | (x << (8 - n));
 }
 
 void scanAllI2C()
@@ -157,32 +211,32 @@ void transition(bool on)
   {
     for (int i = 0; i < 8; i++)
     {
-      controller->setLEDRowPowerStatus(BLUE_ROW_LOOKUP[i], B11111111, 0);
+      controller->setRowPowerStatus(BLUE_ROW_LOOKUP[i], B11111111, 0);
       delay(light_delays[2]);
     }
 
     for (int i = 0; i < 8; i++)
     {
-      controller->setLEDRowPowerStatus(BLUE_ROW_LOOKUP[i], B11111111, 5);
-      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], B11111111, 5);
+      controller->setRowPowerStatus(BLUE_ROW_LOOKUP[i], B11111111, 5);
+      controller->setRowPowerStatus(RED_ROW_LOOKUP[i], B11111111, 5);
       delay(light_delays[2]);
     }
 
     for (int i = 0; i < 8; i++)
     {
-      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], B11111111, 4);
+      controller->setRowPowerStatus(RED_ROW_LOOKUP[i], B11111111, 4);
       delay(light_delays[2]);
     }
 
     for (int i = 7; i >= 0; i--)
     {
-      controller->setLEDRowPowerStatus(GREEN_ROW_LOOKUP[i], B11111111, 8);
-      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], B11111111, 8);
+      controller->setRowPowerStatus(GREEN_ROW_LOOKUP[i], B11111111, 8);
+      controller->setRowPowerStatus(RED_ROW_LOOKUP[i], B11111111, 8);
       delay(light_delays[2]);
     }
     for (int i = 7; i >= 0; i--)
     {
-      controller->setLEDRowPowerStatus(GREEN_ROW_LOOKUP[i], B11111111, 12);
+      controller->setRowPowerStatus(GREEN_ROW_LOOKUP[i], B11111111, 12);
       delay(light_delays[2]);
     }
   }
@@ -190,32 +244,32 @@ void transition(bool on)
   {
     for (int i = 0; i < 8; i++)
     {
-      controller->setLEDRowPowerStatus(BLUE_ROW_LOOKUP[i], 0x00, 0);
+      controller->setRowPowerStatus(BLUE_ROW_LOOKUP[i], 0x00, 0);
       delay(light_delays[2]);
     }
 
     for (int i = 0; i < 8; i++)
     {
-      controller->setLEDRowPowerStatus(BLUE_ROW_LOOKUP[i], 0x00, 5);
-      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], 0x00, 5);
+      controller->setRowPowerStatus(BLUE_ROW_LOOKUP[i], 0x00, 5);
+      controller->setRowPowerStatus(RED_ROW_LOOKUP[i], 0x00, 5);
       delay(light_delays[2]);
     }
 
     for (int i = 0; i < 8; i++)
     {
-      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], 0x00, 4);
+      controller->setRowPowerStatus(RED_ROW_LOOKUP[i], 0x00, 4);
       delay(light_delays[2]);
     }
 
     for (int i = 7; i >= 0; i--)
     {
-      controller->setLEDRowPowerStatus(GREEN_ROW_LOOKUP[i], 0x00, 8);
-      controller->setLEDRowPowerStatus(RED_ROW_LOOKUP[i], 0x00, 8);
+      controller->setRowPowerStatus(GREEN_ROW_LOOKUP[i], 0x00, 8);
+      controller->setRowPowerStatus(RED_ROW_LOOKUP[i], 0x00, 8);
       delay(light_delays[2]);
     }
     for (int i = 7; i >= 0; i--)
     {
-      controller->setLEDRowPowerStatus(GREEN_ROW_LOOKUP[i], 0x00, 12);
+      controller->setRowPowerStatus(GREEN_ROW_LOOKUP[i], 0x00, 12);
       delay(light_delays[2]);
     }
   }

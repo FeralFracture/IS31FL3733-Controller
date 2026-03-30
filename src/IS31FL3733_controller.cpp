@@ -1,5 +1,6 @@
 #include "IS31FL3733_controller.h"
 
+uint8_t reverseByte(uint8_t x);
 IS31FL3733_Controller::IS31FL3733_Controller(int SDB_PIN, bool syncing)
 {
     pinMode(SDB_PIN, OUTPUT);
@@ -33,7 +34,7 @@ IS31FL3733_Controller::IS31FL3733_Controller(int SDB_PIN, bool syncing)
             }
             for (uint8_t reg = 0x00; reg <= 0x17; reg++)
             {
-                setLEDRowPowerStatus(reg, B00000000, devices[i] - IS31FL3733_ADDR);
+                setRowPowerStatus(reg, B00000000, devices[i] - IS31FL3733_ADDR);
             }
         }
     }
@@ -58,7 +59,7 @@ void IS31FL3733_Controller::setGlobalBrightness(uint8_t modifier, uint8_t module
     switchPage(3, module);
     writeRegister(IS31FL3733_ADDR + module, 0x01, modifier);
 }
-void IS31FL3733_Controller::setLEDRowPowerStatus(uint8_t row_reg, uint8_t power_code, uint8_t module)
+void IS31FL3733_Controller::setRowPowerStatus(uint8_t row_reg, uint8_t power_code, uint8_t module)
 {
     switchPage(0, module);
     writeRegister(IS31FL3733_ADDR + module, row_reg, power_code);
@@ -68,7 +69,7 @@ void IS31FL3733_Controller::setLEDPWM(uint8_t led_reg, uint8_t pwm, uint8_t modu
     switchPage(1, module);
     writeRegister(IS31FL3733_ADDR + module, led_reg, pwm);
 }
-void IS31FL3733_Controller::powerAll(uint8_t color_mask, bool powered, uint8_t module)
+void IS31FL3733_Controller::setColorPower(uint8_t color_mask, bool powered, uint8_t module)
 {
     uint8_t fill = powered ? 0xFF : 0x00;
     if (color_mask == (COLOR_R | COLOR_G | COLOR_B))
@@ -81,29 +82,43 @@ void IS31FL3733_Controller::powerAll(uint8_t color_mask, bool powered, uint8_t m
     }
     for (int i = 0; i < 8; i++)
     {
-        setLEDPowers(i, color_mask, fill, module);
+        setLEDRowPower(i, color_mask, fill, module);
     }
 }
-void IS31FL3733_Controller::setLEDPowers(int row, uint8_t color_mask, uint8_t power_code, uint8_t module)
+void IS31FL3733_Controller::setLEDRowPower(int row, uint8_t color_mask, uint8_t power_code, uint8_t module)
 {
     // Red
     if (color_mask & COLOR_R)
     {
-        uint8_t row_addr = RED_ROW_LOOKUP[row];
-        setLEDRowPowerStatus(row_addr, power_code, module);
+        uint8_t row_addr = RED_ROW_LOOKUP[7 - row];
+        setRowPowerStatus(row_addr, reverseByte(power_code), module);
     }
 
     // Green
     if (color_mask & COLOR_G)
     {
-        uint8_t row_addr = GREEN_ROW_LOOKUP[row];
-        setLEDRowPowerStatus(row_addr, power_code, module);
+        uint8_t row_addr = GREEN_ROW_LOOKUP[7 - row];
+        setRowPowerStatus(row_addr, reverseByte(power_code), module);
     }
 
     // Blue
     if (color_mask & COLOR_B)
     {
-        uint8_t row_addr = BLUE_ROW_LOOKUP[row];
-        setLEDRowPowerStatus(row_addr, power_code, module);
+        uint8_t row_addr = BLUE_ROW_LOOKUP[7 - row];
+        setRowPowerStatus(row_addr, reverseByte(power_code), module);
     }
+}
+
+uint8_t reverseByte(uint8_t x)
+{
+    uint8_t result = 0;
+
+    for (int i = 0; i < 8; i++)
+    {
+        result <<= 1;      // make room
+        result |= (x & 1); // copy lowest bit
+        x >>= 1;           // shift input
+    }
+
+    return result;
 }
